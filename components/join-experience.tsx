@@ -14,7 +14,7 @@ type Step = IntakeStep | "claim" | "publish" | "published";
 const steps = intakeSteps;
 const emptyDraft = (): ProfileDraft => ({ type: "PERSON", displayName: "", identity: "", capabilities: [], interests: [], projects: [], projectDetails: [], selectedProjects: [], createdProjects: [], customProjectDraft: "", capabilitiesText: "", interestsText: "", asks: [], timezone: "", contacts: [], contactPreference: null, links: [], exclusions: [], claimed: false, published: false, status: "DRAFT", capabilityRefined: false, skippedOptionalSteps: [] });
 
-export function JoinExperience({ enabledProviders = ["google", "github", "twitter"] }: { enabledProviders?: PublicSocialProvider[] }) {
+export function JoinExperience({ enabledProviders = [] }: { enabledProviders?: PublicSocialProvider[] }) {
   const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
   const [step, setStep] = useState<Step>("welcome");
   const [ready, setReady] = useState(false);
