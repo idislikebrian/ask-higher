@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum ProfileType {
+  PERSON
+  ORGANIZATION
+  PROJECT
+}
+
+enum ProfileStatus {
+  DRAFT
+  PUBLISHED
+  HIDDEN
+}
+
+enum ContactPreference {
+  DIRECT_CONTACT
+  INTRO_REQUESTS
+  BOTH
+  NOT_AVAILABLE
+}
+
+enum SkillSource {
+  SUGGESTED
+  CUSTOM
+}
+
+enum RelationshipStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AskType {
+  COLLABORATORS
+  FEEDBACK
+  DEVELOPER
+  DESIGNER
+  FUNDING
+  DISTRIBUTION
+  INTRODUCTION
+  OTHER
+}
+
+enum AskUrgency {
+  EXPLORING
+  ACTIVELY_LOOKING
+  NEEDED_NOW
+}
+
+enum AskStatus {
+  ACTIVE
+  FULFILLED
+  PAUSED
+  EXPIRED
+}
+
+enum ContactMethodType {
+  TELEGRAM
+  X
+  FARCASTER
+  HIGHERIO
+  EMAIL
+  WEBSITE
+}
+
+enum ContactVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum ConsentType {
+  DIRECTORY_SEARCH
+}
+
+enum ProfileOwnerRole {
+  OWNER
+  MANAGER
+}
+
+model User {
+  id            String         @id
+  name          String
+  email         String         @unique
+  emailVerified Boolean        @default(false)
+  image         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  profileOwners ProfileOwner[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String   @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Profile {
+  id                         String                @id @default(cuid())
+  type                       ProfileType
+  displayName                String
+  identityText               String?
+  timezone                   String?
+  contactPreference           ContactPreference?
+  status                     ProfileStatus        @default(DRAFT)
+  claimedAt                  DateTime?
+  publishedAt                DateTime?
+  deletedAt                  DateTime?
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  skills                     ProfileSkill[]
+  interests                  ProfileInterest[]
+  asks                       Ask[]
+  contacts                   ProfileContact[]
+  exclusions                 MatchingExclusion[]
+  submissions                ProfileSubmission[]
+  consents                   ConsentRecord[]
+  links                      ProfileLink[]
+  owners                     ProfileOwner[]
+  personProjectRelationships ProfileRelationship[] @relation("PersonProject")
+  projectPersonRelationships ProfileRelationship[] @relation("ProjectPerson")
+
+  @@index([type, status])
+  @@index([status, publishedAt])
+}
+
+model ProfileLink {
+  id        String   @id @default(cuid())
+  profileId String
+  label     String
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, url])
+  @@index([profileId])
+}
+
+model ProfileOwner {
+  id        String           @id @default(cuid())
+  userId    String
+  profileId String
+  role      ProfileOwnerRole @default(OWNER)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile   Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, profileId])
+  @@index([profileId, role])
+}
+
+model Skill {
+  id            String         @id @default(cuid())
+  canonicalName String
+  slug          String         @unique
+  profiles      ProfileSkill[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model ProfileSkill {
+  profileId    String
+  skillId      String
+  originalText String?
+  source       SkillSource
+  createdAt    DateTime @default(now())
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill        Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, skillId])
+  @@index([skillId])
+}
+
+model Interest {
+  id            String            @id @default(cuid())
+  canonicalName String
+  slug          String            @unique
+  profiles      ProfileInterest[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model ProfileInterest {
+  profileId    String
+  interestId   String
+  originalText String?
+  source       SkillSource
+  createdAt    DateTime @default(now())
+  profile      Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  interest     Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, interestId])
+  @@index([interestId])
+}
+
+model ProfileRelationship {
+  id               String             @id @default(cuid())
+  personProfileId  String
+  projectProfileId String
+  role             String?
+  roleSource       SkillSource?
+  originalRoleText String?
+  status           RelationshipStatus @default(ACTIVE)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  personProfile    Profile            @relation("PersonProject", fields: [personProfileId], references: [id], onDelete: Cascade)
+  projectProfile   Profile            @relation("ProjectPerson", fields: [projectProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([personProfileId, projectProfileId])
+  @@index([projectProfileId, status])
+}
+
+model Ask {
+  id        String     @id @default(cuid())
+  profileId String
+  type      AskType
+  detail    String
+  urgency   AskUrgency
+  status    AskStatus @default(ACTIVE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  profile   Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, status])
+}
+
+model ProfileContact {
+  id         String              @id @default(cuid())
+  profileId  String
+  type       ContactMethodType
+  value      String
+  preferred  Boolean             @default(false)
+  visibility ContactVisibility   @default(PUBLIC)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  profile    Profile             @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, type])
+  @@index([profileId, visibility])
+}
+
+model MatchingExclusion {
+  id        String   @id @default(cuid())
+  profileId String
+  text      String
+  createdAt DateTime @default(now())
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model ProfileSubmission {
+  id        String   @id @default(cuid())
+  profileId String
+  rawPayload Json
+  createdAt DateTime @default(now())
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, createdAt])
+}
+
+model ConsentRecord {
+  id        String      @id @default(cuid())
+  profileId String
+  type      ConsentType
+  version   String
+  grantedAt DateTime    @default(now())
+  revokedAt DateTime?
+  profile   Profile     @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, type, revokedAt])
+}

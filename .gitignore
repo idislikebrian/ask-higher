@@ -1,0 +1,14 @@
+# Local secrets and environment files. Keep the safe template tracked.
+.env*
+!.env.example
+
+# Local/generated development state.
+node_modules/
+.next/
+.neon
+coverage/
+*.tsbuildinfo
+.vercel
+
+# TypeScript build cache
+*.tsbuildinfo
