@@ -7,6 +7,14 @@ The public-alpha claim flow uses the existing Better Auth `User`, `Account`, `Se
 Register these exact callbacks in the provider consoles:
 
 ```text
+https://aethernet.lol/api/auth/callback/google
+https://aethernet.lol/api/auth/callback/github
+https://aethernet.lol/api/auth/callback/twitter
+```
+
+The previous Vercel branch callbacks remain historical deployment notes only:
+
+```text
 https://ask-higher-git-gate-a-preview-idislikebrians-projects.vercel.app/api/auth/callback/google
 https://ask-higher-git-gate-a-preview-idislikebrians-projects.vercel.app/api/auth/callback/github
 https://ask-higher-git-gate-a-preview-idislikebrians-projects.vercel.app/api/auth/callback/twitter
@@ -39,11 +47,11 @@ We do not invent an email address or create a second unconnected session. The Pr
 
 The clean next bridge is to add an explicit Farcaster identity record containing FID, username/display identity, provider identifier, and verified auth metadata, then establish the existing Better Auth ownership/session only after deciding how a Farcaster-primary user satisfies the required email invariant. That decision should be made before adding a migration.
 
-For the future Preview origin, the SIWF/AuthKit configuration would use:
+For the future alpha origin, the SIWF/AuthKit configuration would use:
 
 ```text
-domain: ask-higher-git-gate-a-preview-idislikebrians-projects.vercel.app
-siweUri: https://ask-higher-git-gate-a-preview-idislikebrians-projects.vercel.app/join
+domain: aethernet.lol
+siweUri: https://aethernet.lol/join
 ```
 
 The official AuthKit setup also requires its configured Farcaster relay/RPC values. No Farcaster credentials or schema changes are included in this pass.

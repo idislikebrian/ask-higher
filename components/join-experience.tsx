@@ -7,13 +7,14 @@ import { firstMissingRequiredStep, firstUnresolvedIntakeStep, intakeSteps, isCon
 import { capabilitySuggestions, interestSuggestions, seededProjects } from "@/lib/seed";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/storage";
 import { authClient } from "@/lib/auth-client";
+import type { PublicSocialProvider } from "@/lib/auth-providers";
 import type { Ask, AskType, AskUrgency, ContactMethod, ContactPreference, Interest, Profile, ProfileDraft, ProfileStatus, Project, Skill } from "@/lib/types";
 
 type Step = IntakeStep | "claim" | "publish" | "published";
 const steps = intakeSteps;
 const emptyDraft = (): ProfileDraft => ({ type: "PERSON", displayName: "", identity: "", capabilities: [], interests: [], projects: [], projectDetails: [], selectedProjects: [], createdProjects: [], customProjectDraft: "", capabilitiesText: "", interestsText: "", asks: [], timezone: "", contacts: [], contactPreference: null, links: [], exclusions: [], claimed: false, published: false, status: "DRAFT", capabilityRefined: false, skippedOptionalSteps: [] });
 
-export function JoinExperience() {
+export function JoinExperience({ enabledProviders = ["google", "github", "twitter"] }: { enabledProviders?: PublicSocialProvider[] }) {
   const [draft, setDraft] = useState<ProfileDraft>(emptyDraft);
   const [step, setStep] = useState<Step>("welcome");
   const [ready, setReady] = useState(false);
@@ -79,7 +80,7 @@ export function JoinExperience() {
   if (!ready) return null;
   if (step === "welcome") return <Shell><div className="max-w-3xl pt-20 sm:pt-32"><Eyebrow>ASK HIGHER / JOIN</Eyebrow><h1 className="mt-8 max-w-2xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-7xl">Make yourself easier to find in Higher.</h1><p className="mt-8 max-w-lg text-lg leading-8 text-[var(--muted)]">Tell people what you work on, what you can help with, and where you’re looking for a connection.</p><button className="primary mt-12" onClick={() => next("name")}>Start your profile <Arrow /></button></div></Shell>;
   if (step === "preview" || step === "published") return <Shell published={step === "published"}><ProfilePreview draft={publishedProfile || draft} published={step === "published"} owned={Boolean(ownedProfileId && session.data?.user)} profileStatus={draft.status} canPublish={Boolean(session.data?.user && draft.claimed)} ownerAction={ownerAction} ownerError={ownerError} onEdit={(target) => { if (step === "published") setPublishedProfile(null); next(target); }} onClaim={() => { if (session.data?.user && draft.claimed) { next("publish"); return; } const claimedDraft = { ...draft, claimed: true }; setDraft(claimedDraft); saveDraft(claimedDraft); next("claim"); }} onHide={() => runOwnerAction("hide")} onRestore={() => runOwnerAction("restore")} onDelete={() => runOwnerAction("delete")} onRestart={() => { clearDraft(); setDraft(emptyDraft()); setOwnedProfileId(null); setPublishedProfile(null); setStep("welcome"); }} /></Shell>;
-  if (step === "claim") return <SocialClaimStep onBack={back} />;
+  if (step === "claim") return <SocialClaimStep onBack={back} enabledProviders={enabledProviders} />;
   if (step === "publish") return <PublishStep draft={draft} onPublished={(profile) => { update({ published: true }); setOwnedProfileId(profile.id); setPublishedProfile(profile); setStep("published"); }} onReview={() => next("preview")} />;
   return <Shell><div className="progress-row"><button className="back-button" onClick={back} aria-label="Go back">←</button><div className="progress"><span style={{ width: `${Math.min(100, (steps.indexOf(step) + 1) / steps.length * 100)}%` }} /></div><span className="progress-count">{Math.max(1, steps.indexOf(step) + 1)} / {steps.length}</span></div><div key={step} className="question-wrap fade-in">{renderStep(step, draft, update, next)}</div></Shell>;
 }
@@ -125,11 +126,13 @@ function AskStep({ draft, update, next }: { draft: ProfileDraft; update: (patch:
 function ContactStep({ draft, update, next }: { draft: ProfileDraft; update: (patch: Partial<ProfileDraft>) => void; next: () => void }) { const [method, setMethod] = useState<ContactMethod>("Telegram"); const [value, setValue] = useState(""); const required = isContactMethodRequired(draft.contactPreference); const add = () => { const trimmed = value.trim(); if (!trimmed) return; update({ contacts: [...draft.contacts.filter((item) => item.method !== method), { method, value: trimmed }] }); setValue(""); }; return <Question eyebrow="MAKE A PATH" title="Reach me on…" copy="Add one or more methods, then continue when you’re ready."><div className="ask-form"><select className="text-input" value={method} onChange={(e) => setMethod(e.target.value as ContactMethod)}>{["Telegram", "X", "Farcaster", "Higherio", "Email", "Website"].map((item) => <option key={item}>{item}</option>)}</select><div className="inline-add"><input className="text-input" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="@handle or link" /><button className="outline-button" disabled={!value.trim()} onClick={add}>Add contact method</button></div></div><div className="ask-list">{draft.contacts.map((contact) => <div className="ask-item" key={contact.method}><span><b>{contact.method}</b><br />{contact.value}</span><button onClick={() => update({ contacts: draft.contacts.filter((item) => item.method !== contact.method) })}>×</button></div>)}</div><Continue disabled={required && !draft.contacts.length} onClick={next} label={draft.contacts.length ? "Continue" : required ? "Add a contact method" : "Skip for now"} /></Question>; }
 function LinksStep({ draft, update, next }: { draft: ProfileDraft; update: (patch: Partial<ProfileDraft>) => void; next: () => void }) { const [label, setLabel] = useState("Higherio"); const [url, setUrl] = useState(""); const add = () => { if (!url.trim()) return; update({ links: [...draft.links, { label, url: url.trim() }] }); setUrl(""); }; return <Question eyebrow="OPTIONAL / LESS PROMINENT" title="I’m also at…"><div className="ask-form"><div className="inline-add"><select className="text-input" value={label} onChange={(e) => setLabel(e.target.value)}>{["Higherio", "Farcaster", "X", "GitHub", "Personal website"].map((item) => <option key={item}>{item}</option>)}</select><input className="text-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="https://…" /></div><button className="outline-button" onClick={add}>Add link</button></div><div className="tag-list">{draft.links.map((link) => <button className="tag tag-selected" key={link.url} onClick={() => update({ links: draft.links.filter((item) => item.url !== link.url) })}>{link.label} ×</button>)}</div><Continue onClick={next} label={draft.links.length ? "Continue" : "Skip for now"} /></Question>; }
 function ClaimStep({ onBack }: { onBack: () => void }) { const [email, setEmail] = useState(""); const [sent, setSent] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const claim = async () => { if (!email.trim()) return; setBusy(true); setError(""); const result = await authClient.signIn.magicLink({ email: email.trim(), callbackURL: "/join" }); if (result.error) setError(result.error.message || "Could not send the magic link."); else setSent(true); setBusy(false); }; return <Shell><div className="question-wrap"><Eyebrow>YOUR PROFILE IS READY</Eyebrow><h1 className="question-title">Claim this profile.</h1>{sent ? <><p className="question-copy">Check your email for a secure link. Your draft will still be here when you return.</p><p className="validation-message">Development delivery is logged in the server terminal.</p></> : <><p className="question-copy">Enter your email to claim this profile. We’ll send a one-time sign-in link.</p><input autoFocus className="big-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} onKeyDown={(event) => event.key === "Enter" && claim()} placeholder="you@example.com" />{error && <p className="validation-message" role="alert">{error}</p>}<button className="primary mt-10" disabled={!email.trim() || busy} onClick={claim}>{busy ? "Sending…" : "Send claim link"} <Arrow /></button></>}<button className="text-button mt-5" onClick={onBack}>Back</button></div></Shell>; }
-function SocialClaimStep({ onBack }: { onBack: () => void }) {
-  type SocialProvider = "google" | "github" | "twitter";
-  const [busy, setBusy] = useState<SocialProvider | null>(null);
+function SocialClaimStep({ onBack, enabledProviders }: { onBack: () => void; enabledProviders: PublicSocialProvider[] }) {
+  const [emailMode, setEmailMode] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState<PublicSocialProvider | "email" | null>(null);
   const [error, setError] = useState("");
-  const signIn = async (provider: SocialProvider) => {
+  const signIn = async (provider: PublicSocialProvider) => {
     setBusy(provider);
     setError("");
     const result = await authClient.signIn.social({ provider, callbackURL: "/join" });
@@ -138,21 +141,43 @@ function SocialClaimStep({ onBack }: { onBack: () => void }) {
       setBusy(null);
     }
   };
+  const claim = async () => {
+    if (!email.trim()) return;
+    setBusy("email");
+    setError("");
+    const result = await authClient.signIn.magicLink({ email: email.trim(), callbackURL: "/join" });
+    if (result.error) {
+      setError(result.error.message || "Could not send the magic link.");
+      setBusy(null);
+    } else {
+      setSent(true);
+      setBusy(null);
+    }
+  };
   return <Shell><div className="question-wrap">
     <Eyebrow>YOUR PROFILE IS READY</Eyebrow>
     <h1 className="question-title">Claim this profile.</h1>
     <p className="question-copy">Sign in to claim this profile. Your draft will still be here when you return.</p>
-    <div className="auth-provider-list" aria-label="Sign-in options">
-      <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("google")}>
+    {!emailMode && !sent && <div className="auth-provider-list" aria-label="Sign-in options">
+      {enabledProviders.includes("google") && <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("google")}>
         {busy === "google" ? "Opening Google…" : "Continue with Google"} <Arrow />
-      </button>
-      <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("github")}>
+      </button>}
+      {enabledProviders.includes("github") && <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("github")}>
         {busy === "github" ? "Opening GitHub…" : "Continue with GitHub"} <Arrow />
-      </button>
-      <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("twitter")}>
+      </button>}
+      {enabledProviders.includes("twitter") && <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("twitter")}>
         {busy === "twitter" ? "Opening X…" : "Continue with X"} <Arrow />
-      </button>
-    </div>
+      </button>}
+      <button className="text-button auth-secondary" onClick={() => setEmailMode(true)}>Continue with email</button>
+    </div>}
+    {sent ? <>
+      <p className="question-copy">Check your email for a secure link. Your draft will still be here when you return.</p>
+      <p className="validation-message">Development delivery is logged in the server terminal.</p>
+    </> : emailMode && <>
+      <input autoFocus className="big-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} onKeyDown={(event) => event.key === "Enter" && claim()} placeholder="you@example.com" />
+      <button className="primary mt-10" disabled={!email.trim() || Boolean(busy)} onClick={claim}>{busy === "email" ? "Sending…" : "Send claim link"} <Arrow /></button>
+      <button className="text-button mt-5" onClick={() => setEmailMode(false)}>Use a social provider instead</button>
+    </>}
     {error && <p className="validation-message" role="alert">{error}</p>}
     <button className="text-button mt-5" onClick={onBack}>Back</button>
   </div></Shell>;
