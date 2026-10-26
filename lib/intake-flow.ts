@@ -4,6 +4,11 @@ export type IntakeStep = "welcome" | "name" | "identity" | "capabilities" | "ref
 
 export const intakeSteps: IntakeStep[] = ["name", "identity", "capabilities", "interests", "projects", "asks", "timezone", "preference", "contact", "links", "exclusions"];
 
+export function shouldLoadCanonicalProfile(input: { ready: boolean; authenticated: boolean; hasInProgressAnonymousDraft: boolean; draftClaimed: boolean }): boolean {
+  if (!input.ready || !input.authenticated) return false;
+  return !(input.hasInProgressAnonymousDraft && input.draftClaimed);
+}
+
 export function nextIntakeStep(current: IntakeStep): IntakeStep {
   const index = intakeSteps.indexOf(current);
   return index >= 0 && index < intakeSteps.length - 1 ? intakeSteps[index + 1] : current === "exclusions" ? "preview" : "name";

@@ -17,6 +17,7 @@
     "db:import": "tsx scripts/import-data.ts",
     "test:persistence": "tsx scripts/test-persistence.ts",
     "test:ownership": "tsx scripts/test-ownership.ts",
+    "test:ownership-restart": "tsx scripts/test-ownership-restart.ts",
     "test:intake-flow": "tsx scripts/test-intake-flow.ts",
     "test:matching": "tsx scripts/test-matching.ts",
     "test:auth-email": "tsx scripts/test-auth-email.ts",
