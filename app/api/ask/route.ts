@@ -13,7 +13,10 @@ export async function POST(request: Request) {
     const matches = rankCandidates(body.query.trim(), candidates);
     const response: AskHigherResponse = { query: body.query.trim(), strength: matches.length ? matches.some((match) => match.strength === "STRONG") ? "STRONG" : "PARTIAL" : "NONE", matches };
     return NextResponse.json(response);
-  } catch { return NextResponse.json({ error: "Ask Higher could not process that question." }, { status: 500 }); }
+  } catch (error) {
+    console.error("[api/ask] request failed", error instanceof Error ? error.message : error);
+    return NextResponse.json({ error: "Ask Higher could not process that question." }, { status: 500 });
+  }
 }
 
 function contactLabel(value: string) { return ({ TELEGRAM: "Telegram", X: "X", FARCASTER: "Farcaster", HIGHERIO: "Higherio", EMAIL: "Email", WEBSITE: "Website" } as Record<string, "Telegram" | "X" | "Farcaster" | "Higherio" | "Email" | "Website">)[value] || "Website"; }
