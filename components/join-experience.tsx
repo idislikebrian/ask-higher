@@ -127,10 +127,7 @@ function LinksStep({ draft, update, next }: { draft: ProfileDraft; update: (patc
 function ClaimStep({ onBack }: { onBack: () => void }) { const [email, setEmail] = useState(""); const [sent, setSent] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const claim = async () => { if (!email.trim()) return; setBusy(true); setError(""); const result = await authClient.signIn.magicLink({ email: email.trim(), callbackURL: "/join" }); if (result.error) setError(result.error.message || "Could not send the magic link."); else setSent(true); setBusy(false); }; return <Shell><div className="question-wrap"><Eyebrow>YOUR PROFILE IS READY</Eyebrow><h1 className="question-title">Claim this profile.</h1>{sent ? <><p className="question-copy">Check your email for a secure link. Your draft will still be here when you return.</p><p className="validation-message">Development delivery is logged in the server terminal.</p></> : <><p className="question-copy">Enter your email to claim this profile. We’ll send a one-time sign-in link.</p><input autoFocus className="big-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} onKeyDown={(event) => event.key === "Enter" && claim()} placeholder="you@example.com" />{error && <p className="validation-message" role="alert">{error}</p>}<button className="primary mt-10" disabled={!email.trim() || busy} onClick={claim}>{busy ? "Sending…" : "Send claim link"} <Arrow /></button></>}<button className="text-button mt-5" onClick={onBack}>Back</button></div></Shell>; }
 function SocialClaimStep({ onBack }: { onBack: () => void }) {
   type SocialProvider = "google" | "github" | "twitter";
-  const [emailMode, setEmailMode] = useState(false);
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [busy, setBusy] = useState<SocialProvider | "email" | null>(null);
+  const [busy, setBusy] = useState<SocialProvider | null>(null);
   const [error, setError] = useState("");
   const signIn = async (provider: SocialProvider) => {
     setBusy(provider);
@@ -141,27 +138,11 @@ function SocialClaimStep({ onBack }: { onBack: () => void }) {
       setBusy(null);
     }
   };
-  const claim = async () => {
-    if (!email.trim()) return;
-    setBusy("email");
-    setError("");
-    const result = await authClient.signIn.magicLink({ email: email.trim(), callbackURL: "/join" });
-    if (result.error) {
-      setError(result.error.message || "Could not send the magic link.");
-      setBusy(null);
-    } else {
-      setSent(true);
-      setBusy(null);
-    }
-  };
   return <Shell><div className="question-wrap">
     <Eyebrow>YOUR PROFILE IS READY</Eyebrow>
     <h1 className="question-title">Claim this profile.</h1>
     <p className="question-copy">Sign in to claim this profile. Your draft will still be here when you return.</p>
-    {!emailMode && !sent && <div className="auth-provider-list" aria-label="Sign-in options">
-      <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => setError("Farcaster sign-in is not enabled yet. The official Farcaster identity bridge is being prepared.")}>
-        Continue with Farcaster <Arrow />
-      </button>
+    <div className="auth-provider-list" aria-label="Sign-in options">
       <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("google")}>
         {busy === "google" ? "Opening Google…" : "Continue with Google"} <Arrow />
       </button>
@@ -171,16 +152,7 @@ function SocialClaimStep({ onBack }: { onBack: () => void }) {
       <button className="outline-button auth-provider" disabled={Boolean(busy)} onClick={() => signIn("twitter")}>
         {busy === "twitter" ? "Opening X…" : "Continue with X"} <Arrow />
       </button>
-      <button className="text-button auth-secondary" onClick={() => setEmailMode(true)}>Use an email link instead</button>
-    </div>}
-    {sent ? <>
-      <p className="question-copy">Check your email for a secure link. Your draft will still be here when you return.</p>
-      <p className="validation-message">Development delivery is logged in the server terminal.</p>
-    </> : emailMode && <>
-      <input autoFocus className="big-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} onKeyDown={(event) => event.key === "Enter" && claim()} placeholder="you@example.com" />
-      <button className="primary mt-10" disabled={!email.trim() || Boolean(busy)} onClick={claim}>{busy === "email" ? "Sending…" : "Send claim link"} <Arrow /></button>
-      <button className="text-button mt-5" onClick={() => setEmailMode(false)}>Use a social provider instead</button>
-    </>}
+    </div>
     {error && <p className="validation-message" role="alert">{error}</p>}
     <button className="text-button mt-5" onClick={onBack}>Back</button>
   </div></Shell>;
