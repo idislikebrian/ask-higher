@@ -20,6 +20,7 @@
     "test:intake-flow": "tsx scripts/test-intake-flow.ts",
     "test:matching": "tsx scripts/test-matching.ts",
     "test:auth-email": "tsx scripts/test-auth-email.ts",
+    "test:auth-providers": "tsx scripts/test-auth-providers.ts",
     "evaluate:matching": "tsx scripts/evaluate-matching.ts"
   },
   "dependencies": {

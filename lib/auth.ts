@@ -3,6 +3,7 @@ import { betterAuth } from "better-auth";
 import { magicLink } from "better-auth/plugins";
 import { prisma } from "@/lib/db";
 import { sendMagicLinkEmail } from "@/lib/email";
+import { buildSocialProviders } from "@/lib/auth-providers";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 const authBaseUrl = process.env.BETTER_AUTH_URL
@@ -14,6 +15,13 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "postgresql" }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: authBaseUrl,
+  socialProviders: buildSocialProviders(),
+  account: {
+    accountLinking: {
+      enabled: true,
+      disableImplicitLinking: true,
+    },
+  },
   plugins: [
     magicLink({
       sendMagicLink: async ({ email, url }) => {
