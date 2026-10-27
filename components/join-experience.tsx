@@ -7,6 +7,7 @@ import { firstMissingRequiredStep, firstUnresolvedIntakeStep, intakeSteps, isCon
 import { capabilitySuggestions, interestSuggestions, seededProjects } from "@/lib/seed";
 import { clearDraft, loadDraft, saveDraft } from "@/lib/storage";
 import { authClient } from "@/lib/auth-client";
+import { SiteHeader } from "@/components/site-header";
 import type { PublicSocialProvider } from "@/lib/auth-providers";
 import type { Ask, AskType, AskUrgency, ContactMethod, ContactPreference, Interest, Profile, ProfileDraft, ProfileStatus, Project, Skill } from "@/lib/types";
 
@@ -118,7 +119,7 @@ function renderStep(step: Step, draft: ProfileDraft, update: (patch: Partial<Pro
   return <Question eyebrow="OPTIONAL" title="Don’t match me for…" copy="A little context can prevent an unhelpful introduction."><textarea className="big-input min-h-32 resize-none" value={draft.exclusions[0]?.text || ""} onChange={(e) => update({ exclusions: e.target.value ? [{ id: "exclusion-1", text: e.target.value }] : [] })} placeholder="NFT consulting work" /><Continue onClick={() => next("preview")} label="See my profile" /></Question>;
 }
 
-function Shell({ children, published = false }: { children: React.ReactNode; published?: boolean }) { return <main className="min-h-screen px-5 pb-16 sm:px-10"><header className="site-header"><a href="/join" className="text-sm font-bold tracking-[-0.02em]">ASK HIGHER</a>{!published && <span className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Profile intake</span>}</header>{children}</main>; }
+function Shell({ children, published = false }: { children: React.ReactNode; published?: boolean }) { return <main className="min-h-screen px-5 pb-16 sm:px-10"><SiteHeader variant={published ? "published" : "intake"} />{children}</main>; }
 function Eyebrow({ children }: { children: React.ReactNode }) { return <p className="text-xs font-bold tracking-[0.18em] text-[var(--muted)]">{children}</p>; }
 function Question({ eyebrow, title, copy, children }: { eyebrow: string; title: string; copy?: string; children: React.ReactNode }) { return <><Eyebrow>{eyebrow}</Eyebrow><h1 className="question-title">{title}</h1>{copy && <p className="question-copy">{copy}</p>}{children}</>; }
 function Continue({ onClick, disabled, label = "Continue" }: { onClick: () => void; disabled?: boolean; label?: string }) { return <button className="primary mt-10" disabled={disabled} onClick={onClick}>{label} <Arrow /></button>; }

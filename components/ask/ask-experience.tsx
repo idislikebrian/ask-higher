@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
 import type { AskHigherResponse, MatchEvidence, MatchResult } from "@/lib/matching/types";
 
 const suggestions = [
@@ -37,7 +38,7 @@ export function AskExperience() {
   }
 
   return <main className="min-h-screen px-5 pb-20 sm:px-10">
-    <header className="site-header"><Link href="/" className="text-sm font-bold tracking-[-0.02em]">ASK HIGHER</Link><Link href="/join" className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Join the network</Link></header>
+    <SiteHeader variant="ask" />
     <div className="preview-wrap ask-wrap">
       <p className="text-xs font-bold tracking-[0.18em] text-[var(--muted)]">DISCOVER PEOPLE AND PROJECTS</p>
       <h1 className="question-title ask-title">Who should you talk to?</h1>
