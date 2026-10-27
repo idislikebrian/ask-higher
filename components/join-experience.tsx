@@ -106,9 +106,14 @@ export function JoinExperience({ enabledProviders = [] }: { enabledProviders?: P
   if (step === "preview" || step === "published") return <Shell published={step === "published"}><ProfilePreview draft={publishedProfile || draft} published={step === "published"} owned={Boolean(ownedProfileId && session.data?.user)} profileStatus={draft.status} canPublish={Boolean(session.data?.user && draft.claimed)} ownerAction={ownerAction} ownerError={ownerError} onEdit={(target) => { if (step === "published") setPublishedProfile(null); next(target); }} onClaim={() => { if (session.data?.user && draft.claimed) { next("publish"); return; } const claimedDraft = { ...draft, claimed: true }; setDraft(claimedDraft); saveDraft(claimedDraft); next("claim"); }} onHide={() => runOwnerAction("hide")} onRestore={() => runOwnerAction("restore")} onDelete={() => runOwnerAction("delete")} onRestart={restartProfile} /></Shell>;
   if (step === "claim") return <SocialClaimStep onBack={back} enabledProviders={enabledProviders} />;
   if (step === "publish") return <PublishStep draft={draft} onPublished={(profile) => { update({ published: true }); setOwnedProfileId(profile.id); setPublishedProfile(profile); setStep("published"); }} onReview={() => next("preview")} />;
-  const currentStep = Math.max(1, steps.indexOf(step) + 1);
-  const progress = Math.min(100, currentStep / steps.length * 100);
-  return <Shell><div className="progress-layout"><div className="progress-rail-column"><div className="progress-rail" role="progressbar" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={currentStep} aria-valuetext={`Question ${currentStep} of ${steps.length}`}><span style={{ height: `${progress}%` }} /></div><span className="progress-count">{currentStep} / {steps.length}</span><button className="back-button" onClick={back} aria-label="Go back">←</button></div><div key={step} className="question-wrap fade-in">{renderStep(step, draft, update, next)}</div></div></Shell>;
+  const hasRefineStep = Boolean(getCapabilityRefinement(draft.capabilities));
+  const capabilityIndex = steps.indexOf("capabilities");
+  const progressSteps: Step[] = hasRefineStep
+    ? [...steps.slice(0, capabilityIndex + 1), "refine", ...steps.slice(capabilityIndex + 1)]
+    : steps;
+  const currentStep = Math.max(1, progressSteps.indexOf(step) + 1);
+  const progress = Math.min(100, currentStep / progressSteps.length * 100);
+  return <Shell><div className="progress-layout"><div className="progress-rail-column"><div className="progress-rail" role="progressbar" aria-valuemin={1} aria-valuemax={progressSteps.length} aria-valuenow={currentStep} aria-valuetext={`Question ${currentStep} of ${progressSteps.length}`}><span style={{ height: `${progress}%` }} /></div><span className="progress-count">{currentStep} / {progressSteps.length}</span><button className="back-button" onClick={back} aria-label="Go back">←</button></div><div key={step} className="question-wrap fade-in">{renderStep(step, draft, update, next)}</div></div></Shell>;
 }
 
 function renderStep(step: Step, draft: ProfileDraft, update: (patch: Partial<ProfileDraft>) => void, next: (step?: Step) => void) {
