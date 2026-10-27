@@ -11,15 +11,21 @@ export function SiteHeader({ variant }: SiteHeaderProps) {
 
   return (
     <header className="site-header">
-      <Link href={isJoinContext ? "/join" : "/"} className="text-sm font-bold tracking-[-0.02em]">
+      <Link href={isJoinContext ? "/join" : "/"} className="site-header-wordmark">
         ASK HIGHER
       </Link>
       {variant === "ask" && (
-        <Link href="/join" className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
-          Join the network
-        </Link>
+        <div className="site-header-utility">
+          <Link href="/join" className="site-header-utility-link">
+            Join the network
+          </Link>
+        </div>
       )}
-      {variant === "intake" && <span className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">Profile intake</span>}
+      {variant === "intake" && (
+        <div className="site-header-utility">
+          <span className="site-header-utility-label">Profile intake</span>
+        </div>
+      )}
     </header>
   );
 }
