@@ -26,6 +26,11 @@ export function SiteHeader({ variant }: SiteHeaderProps) {
           <span className="site-header-utility-label">Profile intake</span>
         </div>
       )}
+      {variant === "published" && (
+        <div className="site-header-utility">
+          <span className="site-header-utility-label">Profile live</span>
+        </div>
+      )}
     </header>
   );
 }
