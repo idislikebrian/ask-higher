@@ -1,9 +1,26 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { normalizeProjectName } from "@/lib/projects";
 import type { Profile, ProfileDraft } from "@/lib/types";
 
 const consentVersion = "directory-search-v1";
 const toDbAskTypeMap = { Collaborators: "COLLABORATORS", Feedback: "FEEDBACK", Developer: "DEVELOPER", Designer: "DESIGNER", Funding: "FUNDING", Distribution: "DISTRIBUTION", Introduction: "INTRODUCTION", "Something else": "OTHER" } as const;
+
+export async function saveProfileDraft(draft: ProfileDraft, rawPayload: unknown, userId: string): Promise<{ state: "DRAFT" | "EXISTING_PROFILE"; profileId: string }> {
+  const now = new Date();
+  return prisma.$transaction(async (tx) => {
+    const ownedPeople = await tx.profileOwner.findMany({ where: { userId, role: "OWNER", profile: { type: "PERSON" } }, include: { profile: true } });
+    if (ownedPeople.length > 1) throw new Error("This user has more than one owned PERSON profile.");
+    const existing = ownedPeople[0]?.profile;
+    if (existing && existing.status !== "DRAFT") return { state: "EXISTING_PROFILE", profileId: existing.id };
+    const profile = existing
+      ? await tx.profile.update({ where: { id: existing.id }, data: { displayName: draft.displayName, identityText: draft.identity, timezone: draft.timezone || null, contactPreference: toDbContactPreference(draft.contactPreference), claimedAt: existing.claimedAt || now } })
+      : await tx.profile.create({ data: { type: "PERSON", displayName: draft.displayName, identityText: draft.identity, timezone: draft.timezone || null, contactPreference: toDbContactPreference(draft.contactPreference), status: "DRAFT", claimedAt: now } });
+    if (!existing) await tx.profileOwner.create({ data: { userId, profileId: profile.id, role: "OWNER" } });
+    await tx.profileSubmission.create({ data: { profileId: profile.id, rawPayload: JSON.parse(JSON.stringify(rawPayload)) as Prisma.InputJsonValue } });
+    return { state: "DRAFT", profileId: profile.id };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
 
 export async function publishProfile(draft: ProfileDraft, rawPayload: unknown, userId: string): Promise<Profile> {
   const now = new Date();
@@ -44,7 +61,11 @@ async function replaceProfileRelations(tx: Prisma.TransactionClient, profileId: 
   }
   for (const project of draft.selectedProjects) {
     const existing = await tx.profile.findUnique({ where: { id: project.id } });
-    const projectProfile = existing || await tx.profile.create({ data: { id: project.id, type: "PROJECT", displayName: project.name, identityText: project.description || null, status: "PUBLISHED", publishedAt: now } });
+    if (existing && existing.type !== "PROJECT") throw new Error(`Project ${project.id} is not a PROJECT profile.`);
+    const matchingProject = !existing && !project.allowDistinctName
+      ? (await tx.profile.findMany({ where: { type: "PROJECT", status: "PUBLISHED", deletedAt: null }, select: { id: true, displayName: true, type: true } })).find((item) => normalizeProjectName(item.displayName) === normalizeProjectName(project.name))
+      : null;
+    const projectProfile = existing || matchingProject || await tx.profile.create({ data: { id: project.id, type: "PROJECT", displayName: project.name, identityText: project.description || null, status: "PUBLISHED", publishedAt: now } });
     if (projectProfile.type !== "PROJECT") throw new Error(`Project ${project.id} is not a PROJECT profile.`);
     const relationship = draft.projects.find((item) => item.projectId === project.id);
     await tx.profileRelationship.create({ data: { personProfileId: profileId, projectProfileId: projectProfile.id, role: relationship?.role || null, roleSource: relationship?.roleSource === "suggested" ? "SUGGESTED" : relationship?.roleSource === "custom" ? "CUSTOM" : null, originalRoleText: relationship?.originalRoleText || null } });

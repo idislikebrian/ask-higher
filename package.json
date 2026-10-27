@@ -16,6 +16,8 @@
     "db:export": "tsx scripts/export-data.ts",
     "db:import": "tsx scripts/import-data.ts",
     "test:persistence": "tsx scripts/test-persistence.ts",
+    "test:draft-persistence": "tsx scripts/test-draft-persistence.ts",
+    "test:project-duplicates": "tsx scripts/test-project-duplicates.ts",
     "test:ownership": "tsx scripts/test-ownership.ts",
     "test:ownership-restart": "tsx scripts/test-ownership-restart.ts",
     "test:intake-flow": "tsx scripts/test-intake-flow.ts",

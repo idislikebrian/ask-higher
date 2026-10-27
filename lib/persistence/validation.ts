@@ -8,7 +8,7 @@ const askTypes: Record<string, AskType> = { COLLABORATORS: "Collaborators", Coll
 const askUrgencies: Record<string, AskUrgency> = { EXPLORING: "Exploring", Exploring: "Exploring", ACTIVELY_LOOKING: "Actively looking", "Actively looking": "Actively looking", NEEDED_NOW: "Needed now", "Needed now": "Needed now" };
 const contactMethods: Record<string, ContactMethod> = { TELEGRAM: "Telegram", Telegram: "Telegram", X: "X", FARCASTER: "Farcaster", Farcaster: "Farcaster", HIGHERIO: "Higherio", Higherio: "Higherio", EMAIL: "Email", Email: "Email", WEBSITE: "Website", Website: "Website" };
 
-export function validatePublishPayload(input: unknown): ValidationResult {
+export function validateDraftPayload(input: unknown): ValidationResult {
   if (!input || typeof input !== "object") return { ok: false, errors: ["Request body must be an object."] };
   const value = input as Record<string, unknown>;
   const displayName = stringValue(value.displayName);
@@ -27,7 +27,6 @@ export function validatePublishPayload(input: unknown): ValidationResult {
   if (!capabilities.length) errors.push("At least one capability is required.");
   if (!contactPreference) errors.push("A contact preference is required.");
   if (contactPreference && !isContactPreferenceValid({ contactPreference, contacts })) errors.push("Direct contact and Both require at least one contact method.");
-  if (value.directoryConsent !== true) errors.push("Directory consent is required before publishing.");
   if (!Array.isArray(value.selectedProjects) && value.selectedProjects !== undefined) errors.push("Projects must be an array.");
   if (!Array.isArray(value.asks) && value.asks !== undefined) errors.push("Asks must be an array.");
   if (errors.length) return { ok: false, errors };
@@ -39,9 +38,18 @@ export function validatePublishPayload(input: unknown): ValidationResult {
   return { ok: true, draft };
 }
 
+export function validatePublishPayload(input: unknown): ValidationResult {
+  const result = validateDraftPayload(input);
+  if (!result.ok) return result;
+  if (!input || typeof input !== "object" || (input as Record<string, unknown>).directoryConsent !== true) {
+    return { ok: false, errors: ["Directory consent is required before publishing."] };
+  }
+  return result;
+}
+
 function stringValue(value: unknown): string { return typeof value === "string" ? value.trim() : ""; }
 function normalizeTags(value: unknown, kind: "capability" | "interest"): Skill[] | Interest[] { if (!Array.isArray(value)) return []; return value.flatMap((tag) => { if (!tag || typeof tag !== "object") return []; const item = tag as Record<string, unknown>; const label = stringValue(item.label); if (!label) return []; return [{ id: stringValue(item.id) || `${kind}-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, label, source: item.source === "suggested" ? "suggested" : "custom", ...(stringValue(item.originalText) ? { originalText: stringValue(item.originalText) } : {}) } as Skill | Interest]; }); }
-function normalizeProject(value: unknown): Project[] { if (!value || typeof value !== "object") return []; const item = value as Record<string, unknown>; const id = stringValue(item.id); const name = stringValue(item.name); const description = stringValue(item.description); return id && name && item.type === "PROJECT" ? [{ id, name, description, type: "PROJECT" }] : []; }
+function normalizeProject(value: unknown): Project[] { if (!value || typeof value !== "object") return []; const item = value as Record<string, unknown>; const id = stringValue(item.id); const name = stringValue(item.name); const description = stringValue(item.description); return id && name && item.type === "PROJECT" ? [{ id, name, description, type: "PROJECT", ...(item.allowDistinctName === true ? { allowDistinctName: true } : {}) }] : []; }
 function normalizeRelationship(value: unknown): ProfileProject[] { if (!value || typeof value !== "object") return []; const item = value as Record<string, unknown>; const projectId = stringValue(item.projectId); if (!projectId) return []; return [{ profileId: "draft", projectId, ...(stringValue(item.role) ? { role: stringValue(item.role) } : {}), ...(item.roleSource === "suggested" || item.roleSource === "custom" ? { roleSource: item.roleSource } : {}), ...(stringValue(item.originalRoleText) ? { originalRoleText: stringValue(item.originalRoleText) } : {}) }]; }
 function normalizeLinks(value: unknown): { label: string; url: string }[] { return Array.isArray(value) ? value.flatMap((link) => { if (!link || typeof link !== "object") return []; const item = link as Record<string, unknown>; const label = stringValue(item.label); const url = stringValue(item.url); return label && url ? [{ label, url }] : []; }) : []; }
 function normalizeExclusions(value: unknown): { id: string; text: string }[] { return Array.isArray(value) ? value.flatMap((exclusion) => { if (!exclusion || typeof exclusion !== "object") return []; const item = exclusion as Record<string, unknown>; const text = stringValue(item.text); return text ? [{ id: stringValue(item.id) || `exclusion-${crypto.randomUUID()}`, text }] : []; }) : []; }

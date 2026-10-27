@@ -496,6 +496,11 @@ textarea:focus-visible {
   gap: 0.65rem;
   margin-top: 2.4rem;
 }
+.project-match-list {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1.5rem;
+}
 .project-list .choice small {
   color: var(--muted);
   line-height: 1.4;

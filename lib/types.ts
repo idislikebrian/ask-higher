@@ -8,7 +8,7 @@ export type IntakeOptionalStep = "interests" | "projects" | "asks" | "contact" |
 
 export interface Skill { id: string; label: string; source: "suggested" | "custom"; originalText?: string; }
 export interface Interest { id: string; label: string; source: "suggested" | "custom"; originalText?: string; }
-export interface Project { id: string; name: string; description: string; type: ProfileType; }
+export interface Project { id: string; name: string; description: string; type: ProfileType; allowDistinctName?: boolean; }
 export interface ProfileProject { profileId: string; projectId: string; role?: string; roleSource?: "suggested" | "custom"; originalRoleText?: string; }
 export interface Ask { id: string; type: AskType; detail: string; urgency: AskUrgency; }
 export interface MatchingExclusion { id: string; text: string; }

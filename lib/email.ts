@@ -20,9 +20,9 @@ export async function sendMagicLinkEmail({ to, url }: MagicLinkEmail): Promise<v
     body: JSON.stringify({
       from,
       to: [to],
-      subject: "Sign in to Ask Higher",
-      html: `<p><strong>Ask Higher</strong></p><p>Sign in to Ask Higher</p><p><a href="${escapeHtml(url)}">Continue to Ask Higher</a></p><p>This link expires.</p>`,
-      text: `Ask Higher\n\nSign in to Ask Higher\n\nContinue to Ask Higher: ${url}\n\nThis link expires.`,
+      subject: "Your Ask Higher sign-in link",
+      html: `<p><strong>Ask Higher</strong></p><p>Sign in to Ask Higher</p><p><a href="${escapeHtml(url)}">Continue to Ask Higher</a></p><p>This link expires. If you do not see it, check your spam or junk folder.</p>`,
+      text: `Ask Higher\n\nSign in to Ask Higher\n\nContinue to Ask Higher: ${url}\n\nThis link expires. If you do not see it, check your spam or junk folder.`,
     }),
   });
   if (!response.ok) {

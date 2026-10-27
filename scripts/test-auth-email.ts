@@ -30,6 +30,7 @@ async function main() {
   process.env.EMAIL_FROM = "Ask Higher <ask@example.com>";
   await sendMagicLinkEmail({ to: "test@example.com", url: "https://ask-higher.example/auth/callback?token=secret" });
   assert(request?.body && String(request.body).includes("Continue to Ask Higher"), "Resend payload did not contain the transactional message.");
+  assert(request?.body && String(request.body).includes("spam or junk"), "Resend payload did not include the delivery fallback guidance.");
   assert(request?.headers && JSON.stringify(request.headers).includes("Bearer test-key"), "Resend authorization was not server-side configured.");
   globalThis.fetch = originalFetch;
   console.info = originalInfo;
