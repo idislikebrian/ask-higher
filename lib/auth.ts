@@ -6,7 +6,11 @@ import { sendMagicLinkEmail } from "@/lib/email";
 import { buildSocialProviders } from "@/lib/auth-providers";
 
 const isDevelopment = process.env.NODE_ENV === "development";
-const authBaseUrl = process.env.BETTER_AUTH_URL
+const previewBaseUrl = process.env.VERCEL_ENV === "preview"
+  ? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
+  : undefined;
+const authBaseUrl = previewBaseUrl
+  || process.env.BETTER_AUTH_URL
   || (process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : undefined)
   || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined)
   || "http://localhost:3000";
